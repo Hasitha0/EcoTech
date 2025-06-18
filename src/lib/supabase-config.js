@@ -13,7 +13,7 @@ const getCurrentDomain = () => {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  // Fallback for local development
+  // Fallback - replace with your actual Vercel URL once deployed
   return 'http://localhost:5173';
 };
 
