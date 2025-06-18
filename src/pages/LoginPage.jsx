@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { GridPattern } from '../components/ui/grid-pattern';
 import { AnimatedGridPattern } from '../components/ui/animated-grid-pattern';
+import { ErrorHandler, debugSupabaseAuth, checkNetworkConnectivity } from '../utils/errorHandler';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -42,9 +43,24 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
+      // First, run connectivity and environment checks in production
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔍 Running production diagnostics...');
+        
+        // Check network connectivity
+        const networkOk = await checkNetworkConnectivity();
+        if (!networkOk) {
+          throw new Error('Network connectivity issue detected. Please check your internet connection.');
+        }
+        
+        // Debug Supabase auth setup
+        const debugInfo = await debugSupabaseAuth();
+        console.log('🔧 Supabase Debug Info:', debugInfo);
+      }
+
       const response = await login(email, password);
       
-      console.log('Login successful, user role:', response.user.role);
+      console.log('✅ Login successful, user role:', response.user.role);
       
       // Redirect based on user role (RBAC)
       switch (response.user.role) {
@@ -66,7 +82,14 @@ const LoginPage = () => {
           break;
       }
     } catch (err) {
-      setError(err.message);
+      console.error('❌ Login error:', err);
+      const userFriendlyMessage = ErrorHandler.handleAuthError(err, 'Login Page');
+      setError(userFriendlyMessage);
+      
+      // Additional debugging in production
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔧 Environment Info:', ErrorHandler.getEnvironmentInfo());
+      }
     } finally {
       setIsLoading(false);
     }

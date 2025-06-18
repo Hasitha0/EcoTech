@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { GridPattern } from '../components/ui/grid-pattern';
 import { AnimatedGridPattern } from '../components/ui/animated-grid-pattern';
+import { ErrorHandler, debugSupabaseAuth, checkNetworkConnectivity } from '../utils/errorHandler';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -336,6 +337,21 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
+      // First, run connectivity and environment checks in production
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔍 Running production diagnostics for registration...');
+        
+        // Check network connectivity
+        const networkOk = await checkNetworkConnectivity();
+        if (!networkOk) {
+          throw new Error('Network connectivity issue detected. Please check your internet connection.');
+        }
+        
+        // Debug Supabase auth setup
+        const debugInfo = await debugSupabaseAuth();
+        console.log('🔧 Supabase Debug Info:', debugInfo);
+      }
+
       // Prepare registration data - preserve individual address fields
       const registrationData = {
         ...formData,
@@ -386,13 +402,16 @@ const RegisterPage = () => {
         throw new Error('Registration completed but received unexpected response format');
       }
     } catch (err) {
-      console.error('Registration error:', err);
+      console.error('❌ Registration error:', err);
       
       // Increment retry count
       setRetryCount(prev => prev + 1);
       
+      // Use ErrorHandler for consistent error handling
+      const userFriendlyMessage = ErrorHandler.handleAuthError(err, 'Registration Page');
+      
       // Handle specific error types with detailed messages
-      let errorMessage = '';
+      let errorMessage = userFriendlyMessage;
       
       if (err.message.includes('already exists') || err.message.includes('duplicate') || err.message.includes('already registered')) {
         errorMessage = 'An account with this email address already exists. Please try signing in instead.';
@@ -413,11 +432,15 @@ const RegisterPage = () => {
         errorMessage = 'Our servers are experiencing issues. Please try again in a few moments.';
         setNetworkError(true);
       } else {
-        // Generic error with retry suggestion
-        errorMessage = `Registration failed: ${err.message || 'Unknown error'}. Please try again.`;
+        // Use the user-friendly message from ErrorHandler
         if (retryCount >= 2) {
           errorMessage += ' If the problem persists, please contact support.';
         }
+      }
+      
+      // Additional debugging in production
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔧 Environment Info:', ErrorHandler.getEnvironmentInfo());
       }
       
       setError(errorMessage);

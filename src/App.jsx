@@ -10,6 +10,7 @@ import CareerPage from './pages/CareerPage';
 import FindRecyclingCentersPage from './pages/FindRecyclingCentersPage';
 import LearnPage from './pages/LearnPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import AuthCallback from './pages/AuthCallback';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import React, { useEffect } from 'react';
@@ -513,6 +514,8 @@ function AppContent() {
             <Route path="/register/collector" element={<RegisterPage />} />
             <Route path="/register/recycling-center" element={<RegisterPage />} />
             <Route path="/email-confirmed" element={<EmailConfirmationHandler />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/auth/confirm" element={<AuthCallback />} />
             <Route path="/registration-pending" element={
               <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 transition-all duration-500 bg-slate-950">
                 <div className="max-w-md w-full text-center">
