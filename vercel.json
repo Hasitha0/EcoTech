@@ -5,18 +5,6 @@
       "destination": "/index.html"
     }
   ],
-  "redirects": [
-    {
-      "source": "/login",
-      "destination": "/login",
-      "permanent": false
-    },
-    {
-      "source": "/register", 
-      "destination": "/register",
-      "permanent": false
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -39,10 +27,5 @@
         }
       ]
     }
-  ],
-  "functions": {
-    "src/pages/api/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  ]
 } 

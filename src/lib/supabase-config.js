@@ -13,8 +13,8 @@ const getCurrentDomain = () => {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  // Fallback - replace with your actual Vercel URL once deployed
-  return 'http://localhost:5173';
+  // Production fallback URL
+  return 'https://eco-tech-copy-1kjbhknf8-hasitha0s-projects.vercel.app';
 };
 
 // Create Supabase client
