@@ -10,23 +10,27 @@ const EmailConfirm = () => {
       try {
         console.log('🔍 Email Confirm Page - Current URL:', window.location.href);
         
-        // Extract tokens from URL
+        // Extract tokens/code from URL
         const url = new URL(window.location.href);
         const accessToken = url.searchParams.get('access_token') || url.hash.match(/access_token=([^&]+)/)?.[1];
         const refreshToken = url.searchParams.get('refresh_token') || url.hash.match(/refresh_token=([^&]+)/)?.[1];
+        const confirmationCode = url.searchParams.get('code');
         const type = url.searchParams.get('type') || url.hash.match(/type=([^&]+)/)?.[1];
 
-        console.log('🔍 Email Confirm - Tokens:', {
+        console.log('🔍 Email Confirm - Parameters:', {
           hasAccessToken: !!accessToken,
           hasRefreshToken: !!refreshToken,
-          type
+          hasCode: !!confirmationCode,
+          type,
+          code: confirmationCode ? confirmationCode.substring(0, 8) + '...' : null
         });
 
+        // Handle different confirmation formats
         if (accessToken && refreshToken) {
-          console.log('✅ Setting session...');
+          // Format 1: Direct tokens in URL
+          console.log('✅ Using direct tokens method...');
           setMessage('Setting up your account...');
           
-          // Set the session
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
@@ -41,26 +45,39 @@ const EmailConfirm = () => {
           setStatus('success');
           setMessage('Email confirmed successfully! Redirecting...');
           
-          // Clean URL and redirect
           setTimeout(() => {
-            // Try to redirect to a clean URL
-            if (window.opener) {
-              // If opened in popup/new tab, try to communicate with parent
-              try {
-                window.opener.postMessage('email-confirmed', '*');
-                window.close();
-              } catch (e) {
-                // If that fails, redirect
-                window.location.href = '/dashboard';
-              }
-            } else {
-              // Normal redirect
-              window.location.href = '/dashboard';
-            }
+            window.location.href = '/dashboard';
           }, 2000);
 
+        } else if (confirmationCode) {
+          // Format 2: Confirmation code (more common with email confirmations)
+          console.log('✅ Using confirmation code method...');
+          setMessage('Verifying your email confirmation...');
+          
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: confirmationCode,
+            type: 'email'
+          });
+
+          if (error) {
+            console.error('❌ OTP verification error:', error);
+            throw error;
+          }
+
+          if (data.user) {
+            console.log('✅ Email confirmed for user:', data.user.id);
+            setStatus('success');
+            setMessage('Email confirmed successfully! Redirecting...');
+            
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 2000);
+          } else {
+            throw new Error('Email confirmation succeeded but no user returned');
+          }
+
         } else {
-          console.log('❌ No tokens found in URL');
+          console.log('❌ No valid confirmation parameters found');
           setStatus('error');
           setMessage('Invalid confirmation link. Please try again or request a new confirmation email.');
         }
