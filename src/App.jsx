@@ -758,9 +758,9 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <Router>
-            <AppContent />
-          </Router>
+        <Router>
+          <AppContent />
+        </Router>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

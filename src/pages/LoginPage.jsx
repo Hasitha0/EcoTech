@@ -20,7 +20,19 @@ const LoginPage = () => {
   useEffect(() => {
     // Check for URL parameters to show messages
     const urlMessage = searchParams.get('message');
-    if (urlMessage) {
+    const confirmed = searchParams.get('confirmed');
+    const errorParam = searchParams.get('error');
+    
+    if (confirmed === 'true' && urlMessage) {
+      // Email confirmation successful
+      setMessage(urlMessage);
+      setError('');
+    } else if (errorParam === 'true' && urlMessage) {
+      // Email confirmation failed
+      setError(urlMessage);
+      setMessage('');
+    } else if (urlMessage) {
+      // Handle legacy URL parameters
       switch (urlMessage) {
         case 'confirmation-failed':
           setError('Email confirmation failed. Please try logging in or contact support.');
@@ -32,8 +44,20 @@ const LoginPage = () => {
           setMessage('Registration completed successfully! You can now log in.');
           break;
         default:
+          setMessage(urlMessage);
           break;
       }
+    }
+
+    // Clear URL parameters after displaying message
+    if (urlMessage || confirmed || errorParam) {
+      const timer = setTimeout(() => {
+        // Clean up URL without reloading the page
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      }, 5000); // Clear after 5 seconds
+
+      return () => clearTimeout(timer);
     }
   }, [searchParams]);
 

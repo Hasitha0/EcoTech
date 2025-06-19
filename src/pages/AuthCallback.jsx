@@ -109,15 +109,15 @@ const AuthCallback = () => {
               }
 
               setStatus('success');
-              setMessage('🎉 Email confirmed successfully! You are now logged in and will be redirected to the home page.');
+              setMessage('🎉 Email confirmed successfully! You will be redirected to the login page.');
               
-              // Start countdown for redirect to home page
+              // Start countdown for redirect to login page
               const countdownInterval = setInterval(() => {
                 setCountdown(prev => {
                   if (prev <= 1) {
                     clearInterval(countdownInterval);
-                    // Redirect to home page where they'll be logged in
-                    window.location.href = '/';
+                    // Redirect to login page with success message
+                    navigate('/login?confirmed=true&message=Email confirmed successfully! You can now sign in.');
                     return 0;
                   }
                   return prev - 1;
@@ -127,15 +127,15 @@ const AuthCallback = () => {
             } catch (profileError) {
               console.error('❌ Profile creation error:', profileError);
               setStatus('success'); // Still consider email confirmation successful
-              setMessage('Email confirmed! You are now logged in. Redirecting to home page...');
+              setMessage('Email confirmed! Redirecting to login page...');
               
-              // Start countdown for redirect to home page
+              // Start countdown for redirect to login page
               const countdownInterval = setInterval(() => {
                 setCountdown(prev => {
                   if (prev <= 1) {
                     clearInterval(countdownInterval);
-                    // Redirect to home page where they'll be logged in
-                    window.location.href = '/';
+                    // Redirect to login page with success message
+                    navigate('/login?confirmed=true&message=Email confirmed successfully! You can now sign in.');
                     return 0;
                   }
                   return prev - 1;
@@ -158,15 +158,15 @@ const AuthCallback = () => {
           if (session?.user) {
             console.log('✅ Found existing session:', session.user.id);
             setStatus('success');
-            setMessage('Already authenticated! You are logged in. Redirecting to home page...');
+            setMessage('Already authenticated! Redirecting to login page...');
             
-            // Start countdown for redirect to home page
+            // Start countdown for redirect to login page
             const countdownInterval = setInterval(() => {
               setCountdown(prev => {
                 if (prev <= 1) {
                   clearInterval(countdownInterval);
-                  // Always redirect to home page for confirmed users
-                  window.location.href = '/';
+                  // Redirect to login page with already authenticated message
+                  navigate('/login?confirmed=true&message=You are already authenticated.');
                   return 0;
                 }
                 return prev - 1;
@@ -177,13 +177,13 @@ const AuthCallback = () => {
             setStatus('error');
             setMessage('Email confirmation link may have expired or is invalid. Please try registering again.');
             
-            // Start countdown for redirect to home page instead of login
+            // Start countdown for redirect to login page
             const countdownInterval = setInterval(() => {
               setCountdown(prev => {
                 if (prev <= 1) {
                   clearInterval(countdownInterval);
-                  // Redirect to home page instead of login
-                  window.location.href = '/';
+                  // Redirect to login page with error message
+                  navigate('/login?error=true&message=Email confirmation failed. Please try again.');
                   return 0;
                 }
                 return prev - 1;
@@ -195,15 +195,15 @@ const AuthCallback = () => {
       } catch (error) {
         console.error('❌ Auth callback error:', error);
         setStatus('error');
-        setMessage(`Confirmation failed: ${error.message}. Redirecting to home page...`);
+        setMessage(`Confirmation failed: ${error.message}. Redirecting to login page...`);
         
-        // Start countdown for redirect to home page instead of login
+        // Start countdown for redirect to login page
         const countdownInterval = setInterval(() => {
           setCountdown(prev => {
             if (prev <= 1) {
               clearInterval(countdownInterval);
-              // Redirect to home page instead of login
-              window.location.href = '/';
+              // Redirect to login page with error message
+              navigate('/login?error=true&message=Email confirmation failed. Please try again.');
               return 0;
             }
             return prev - 1;
@@ -217,8 +217,8 @@ const AuthCallback = () => {
     return () => clearTimeout(timer);
   }, [navigate, location, user, triggerProfileCreation, refreshUser]);
 
-  const handleGoHome = () => {
-    window.location.href = '/';
+  const handleGoToLogin = () => {
+    navigate('/login?confirmed=true&message=Email confirmed successfully! You can now sign in.');
   };
 
   const handleGoRegister = () => {
@@ -260,11 +260,16 @@ const AuthCallback = () => {
           {(status === 'success' || status === 'error') && (
             <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
               <p className="text-blue-700 dark:text-blue-300 text-sm mb-2">
-                Redirecting to home page in <span className="font-bold">{countdown}</span> seconds...
+                Redirecting to login page in <span className="font-bold">{countdown}</span> seconds...
               </p>
               {status === 'success' && (
                 <p className="text-blue-600 dark:text-blue-400 text-xs">
-                  You'll be logged in and can start using all features!
+                  Your email has been confirmed. You can now sign in to your account.
+                </p>
+              )}
+              {status === 'error' && (
+                <p className="text-red-600 dark:text-red-400 text-xs">
+                  There was an issue with email confirmation. Please try again.
                 </p>
               )}
             </div>
@@ -282,11 +287,11 @@ const AuthCallback = () => {
           
           <div className="space-y-3 mt-6">
             <button
-              onClick={handleGoHome}
+              onClick={handleGoToLogin}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              <span>🏠</span>
-              Go to Home Page Now
+              <span>🔐</span>
+              Go to Login Page Now
             </button>
             {status === 'error' && (
               <button
