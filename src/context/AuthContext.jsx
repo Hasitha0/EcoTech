@@ -587,8 +587,28 @@ export const AuthProvider = ({ children }) => {
   };
 
   const refreshUser = async () => {
-    if (user?.id) {
-      await fetchUserProfile(user.id);
+    try {
+      console.log('RefreshUser called - checking current session...');
+      
+      // First check if there's a current session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error getting session in refreshUser:', error);
+        return;
+      }
+      
+      if (session?.user) {
+        console.log('Found session in refreshUser, handling user session...');
+        await handleUserSession(session.user);
+      } else if (user?.id) {
+        console.log('No session but user exists, fetching profile...');
+        await fetchUserProfile(user.id);
+      } else {
+        console.log('No session and no user in refreshUser');
+      }
+    } catch (error) {
+      console.error('Error in refreshUser:', error);
     }
   };
 
