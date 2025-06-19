@@ -480,7 +480,8 @@ const RegisterPage = () => {
               <ol className="text-sm space-y-2">
                 <li>1. Check your email inbox</li>
                 <li>2. Click the confirmation link</li>
-                <li>3. You'll be redirected to your dashboard</li>
+                <li>3. You'll be redirected to the login page</li>
+                <li>4. Sign in with your credentials</li>
               </ol>
             </div>
             

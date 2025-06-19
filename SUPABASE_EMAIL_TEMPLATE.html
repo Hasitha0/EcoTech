@@ -127,7 +127,7 @@
         </div>
         
         <div class="button-container">
-            <a href="{{ .SiteURL }}/confirm?token_hash={{ .TokenHash }}&type=email" class="confirm-button">
+            <a href="{{ .ConfirmationURL }}" class="confirm-button">
                 ✅ Confirm My Account
             </a>
         </div>
@@ -135,7 +135,7 @@
         <div class="alternative-link">
             <strong>Button not working?</strong> Copy and paste this link into your browser:
             <br><br>
-            <code>{{ .SiteURL }}/confirm?token_hash={{ .TokenHash }}&type=email</code>
+            <code>{{ .ConfirmationURL }}</code>
         </div>
         
         <div class="security-note">
@@ -150,6 +150,8 @@
                 <li>📊 Track your environmental impact</li>
                 <li>🏆 Earn rewards for sustainable practices</li>
             </ul>
+            
+            <p><strong>Next Steps:</strong> After confirming your email, you'll be redirected to the login page where you can sign in with your credentials.</p>
         </div>
         
         <div class="footer">
