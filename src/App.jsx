@@ -667,24 +667,60 @@ function AppContent() {
 }
 
 function App() {
-  // Critical fix: Handle /confirm route at the top level before any context issues
-  console.log('🔍 App component - Current pathname:', typeof window !== 'undefined' ? window.location.pathname : 'SSR');
-  console.log('🔍 App component - Full URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
+  // Enhanced logging for debugging
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : 'SSR';
+  const currentURL = typeof window !== 'undefined' ? window.location.href : 'SSR';
+  const hasConfirmInPath = currentPath.includes('/confirm');
+  const hasCodeParam = typeof window !== 'undefined' ? window.location.search.includes('code=') : false;
+  
+  console.log('🔍 App component render check:', {
+    currentPath,
+    currentURL,
+    hasConfirmInPath,
+    hasCodeParam,
+    shouldTriggerEmergency: hasConfirmInPath || hasCodeParam
+  });
 
-  // Emergency route handling for /confirm - bypass all context and routing issues
-  if (typeof window !== 'undefined' && window.location.pathname === '/confirm') {
-    console.log('🚨 EMERGENCY: /confirm route detected at App level - rendering EmailConfirm directly');
-    return (
-      <div className="min-h-screen bg-slate-950">
-        <div className="fixed top-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50">
-          Emergency Route Handler Active 🚨
-        </div>
-        <div className="fixed top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50">
-          EmailConfirm Emergency Mode ✅
-        </div>
-        <EmailConfirm />
-      </div>
+  // SUPER AGGRESSIVE emergency route handling - check multiple conditions
+  if (typeof window !== 'undefined') {
+    const shouldShowEmailConfirm = (
+      window.location.pathname === '/confirm' ||
+      window.location.pathname.includes('/confirm') ||
+      window.location.search.includes('code=') ||
+      window.location.search.includes('token_hash=') ||
+      window.location.hash.includes('code=') ||
+      window.location.hash.includes('token_hash=')
     );
+
+    if (shouldShowEmailConfirm) {
+      console.log('🚨 SUPER EMERGENCY: Email confirmation detected - bypassing ALL routing');
+      console.log('🚨 Conditions met:', {
+        pathIsConfirm: window.location.pathname === '/confirm',
+        pathIncludesConfirm: window.location.pathname.includes('/confirm'),
+        searchHasCode: window.location.search.includes('code='),
+        searchHasTokenHash: window.location.search.includes('token_hash='),
+        hashHasCode: window.location.hash.includes('code='),
+        hashHasTokenHash: window.location.hash.includes('token_hash=')
+      });
+      
+      return (
+        <div className="min-h-screen bg-slate-950">
+          <div className="fixed top-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50 text-sm">
+            🚨 SUPER EMERGENCY MODE ACTIVE
+          </div>
+          <div className="fixed top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50 text-sm">
+            ✅ EmailConfirm Forced Render
+          </div>
+          <div className="fixed bottom-4 left-4 bg-blue-600 text-white px-4 py-2 rounded-lg z-50 text-xs">
+            Path: {window.location.pathname}
+          </div>
+          <div className="fixed bottom-4 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg z-50 text-xs">
+            URL: {window.location.search}
+          </div>
+          <EmailConfirm />
+        </div>
+      );
+    }
   }
 
   // Test emergency route handler
@@ -717,6 +753,7 @@ function App() {
     );
   }
 
+  console.log('🔄 App component: Proceeding with normal routing');
   return (
     <ErrorBoundary>
       <ThemeProvider>
