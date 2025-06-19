@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your EcoTech Account</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fdf8;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5f3e5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #16a34a;
+            margin-bottom: 10px;
+        }
+        .title {
+            color: #1f2937;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .content {
+            color: #4b5563;
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 30px;
+        }
+        .confirm-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+            transition: all 0.3s ease;
+        }
+        .confirm-button:hover {
+            background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .alternative-link {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        .alternative-link code {
+            background-color: #e5e7eb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .security-note {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #92400e;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            .confirm-button {
+                padding: 14px 24px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🌱 EcoTech</div>
+            <h1 class="title">Confirm Your Account</h1>
+        </div>
+        
+        <div class="content">
+            <p>Welcome to EcoTech! We're excited to have you join our mission to make waste management more sustainable and efficient.</p>
+            
+            <p>To complete your registration and activate your account, please click the button below:</p>
+        </div>
+        
+        <div class="button-container">
+            <a href="{{ .SiteURL }}/confirm?code={{ .TokenHash }}" class="confirm-button">
+                ✅ Confirm My Account
+            </a>
+        </div>
+        
+        <div class="alternative-link">
+            <strong>Button not working?</strong> Copy and paste this link into your browser:
+            <br><br>
+            <code>{{ .SiteURL }}/confirm?code={{ .TokenHash }}</code>
+        </div>
+        
+        <div class="security-note">
+            <strong>🔒 Security Note:</strong> This confirmation link will expire in 24 hours. If you didn't create an account with EcoTech, you can safely ignore this email.
+        </div>
+        
+        <div class="content">
+            <p>Once confirmed, you'll be able to:</p>
+            <ul>
+                <li>🗂️ Schedule waste collection pickups</li>
+                <li>📍 Find nearby recycling centers</li>
+                <li>📊 Track your environmental impact</li>
+                <li>🏆 Earn rewards for sustainable practices</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing EcoTech!</p>
+            <p>If you have any questions, feel free to contact our support team.</p>
+            <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">
+                This email was sent to {{ .Email }}. If you didn't request this, please ignore this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

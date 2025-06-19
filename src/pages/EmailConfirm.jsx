@@ -13,9 +13,18 @@ const EmailConfirm = () => {
   const supabase = createSupabaseClient();
 
   useEffect(() => {
+    console.log('🔍 EmailConfirm component mounted');
+    console.log('🔍 Current location:', location);
+    console.log('🔍 Current URL:', window.location.href);
+    
+    // Add a visual indicator that the component is loaded
+    document.title = 'Email Confirmation - EcoTech';
+    
     const confirmEmail = async () => {
       try {
-        const urlParams = new URLSearchParams(location.search);
+        // Get URL parameters from both location.search and window.location.search as fallback
+        const searchParams = location.search || window.location.search;
+        const urlParams = new URLSearchParams(searchParams);
         const code = urlParams.get('code');
         const token = urlParams.get('token');
         const type = urlParams.get('type');
@@ -30,59 +39,77 @@ const EmailConfirm = () => {
           urlParams: Object.fromEntries(urlParams.entries()),
           hasCode: !!code,
           hasToken: !!token,
-          type
+          type,
+          locationSearch: location.search,
+          locationPathname: location.pathname,
+          windowLocationSearch: window.location.search,
+          windowLocationPathname: window.location.pathname,
+          componentMounted: true,
+          timestamp: new Date().toISOString()
         };
         setDebugInfo(debug);
         
-        console.log('Email confirmation debug info:', debug);
+        console.log('🔍 Email confirmation debug info:', debug);
         
         // Display required Supabase configuration
         if (authConfig.domain.includes('localhost')) {
-          console.warn('Running on localhost - this might cause redirect issues in production');
+          console.warn('⚠️ Running on localhost - this might cause redirect issues in production');
           displayAuthConfiguration();
         }
 
         if (!code && !token) {
-          throw new Error('No confirmation code or token found in URL');
+          throw new Error('No confirmation code or token found in URL. Please check the confirmation link.');
         }
 
         let result;
         
         if (code) {
           // Handle email confirmation with code (recommended format)
-          console.log('Confirming email with code...');
+          console.log('✅ Confirming email with code...');
+          setMessage('Processing your email confirmation...');
+          
           result = await supabase.auth.verifyOtp({
             token_hash: code,
             type: 'email'
           });
         } else if (token) {
           // Handle email confirmation with token (fallback)
-          console.log('Confirming email with token...');
+          console.log('✅ Confirming email with token...');
+          setMessage('Processing your email confirmation...');
+          
           result = await supabase.auth.verifyOtp({
             token_hash: token,
             type: 'email'
           });
         }
 
-        console.log('Confirmation result:', result);
+        console.log('✅ Confirmation result:', result);
 
         if (result.error) {
+          console.error('❌ Confirmation error:', result.error);
           throw result.error;
         }
 
         if (result.data?.user) {
+          console.log('✅ Email confirmed successfully for user:', result.data.user.id);
           setMessage('Email confirmed successfully! You are now logged in.');
           
           // Wait a moment then redirect to dashboard
           setTimeout(() => {
-            navigate('/dashboard');
+            console.log('🔄 Redirecting to dashboard...');
+            if (navigate) {
+              navigate('/dashboard');
+            } else {
+              // Fallback if navigate is not available
+              window.location.href = '/dashboard';
+            }
           }, 2000);
         } else {
           throw new Error('Email confirmation completed but no user data received');
         }
 
       } catch (error) {
-        console.error('Email confirmation error:', error);
+        console.error('❌ Email confirmation error:', error);
         setError(`Failed to confirm email: ${error.message}`);
         
         // Provide helpful error messages
@@ -90,7 +117,15 @@ const EmailConfirm = () => {
           setError('The confirmation link has expired or is invalid. Please request a new confirmation email.');
         } else if (error.message.includes('already confirmed')) {
           setError('This email is already confirmed. You can now log in.');
-          setTimeout(() => navigate('/login'), 2000);
+          setTimeout(() => {
+            if (navigate) {
+              navigate('/login');
+            } else {
+              window.location.href = '/login';
+            }
+          }, 2000);
+        } else if (error.message.includes('No confirmation code')) {
+          setError('Invalid confirmation link format. Please check your email and try again.');
         }
       } finally {
         setLoading(false);
@@ -102,7 +137,8 @@ const EmailConfirm = () => {
 
   const handleResendConfirmation = async () => {
     try {
-      const urlParams = new URLSearchParams(location.search);
+      const searchParams = location.search || window.location.search;
+      const urlParams = new URLSearchParams(searchParams);
       const email = urlParams.get('email');
       
       if (!email) {
@@ -127,6 +163,33 @@ const EmailConfirm = () => {
     }
   };
 
+  const handleGoToLogin = () => {
+    console.log('🔄 Navigating to login...');
+    if (navigate) {
+      navigate('/login');
+    } else {
+      window.location.href = '/login';
+    }
+  };
+
+  const handleGoToRegister = () => {
+    console.log('🔄 Navigating to register...');
+    if (navigate) {
+      navigate('/register');
+    } else {
+      window.location.href = '/register';
+    }
+  };
+
+  const handleGoToDashboard = () => {
+    console.log('🔄 Navigating to dashboard...');
+    if (navigate) {
+      navigate('/dashboard');
+    } else {
+      window.location.href = '/dashboard';
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
@@ -138,6 +201,9 @@ const EmailConfirm = () => {
             </h2>
             <p className="text-gray-600">
               Please wait while we verify your email address...
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {message}
             </p>
           </div>
         </div>
@@ -168,10 +234,16 @@ const EmailConfirm = () => {
                   Resend Confirmation Email
                 </button>
                 <button
-                  onClick={() => navigate('/login')}
+                  onClick={handleGoToLogin}
                   className="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                 >
                   Go to Login
+                </button>
+                <button
+                  onClick={handleGoToRegister}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Register Again
                 </button>
               </div>
             </>
@@ -189,14 +261,20 @@ const EmailConfirm = () => {
               <p className="text-gray-500 text-sm">
                 Redirecting to your dashboard...
               </p>
+              <button
+                onClick={handleGoToDashboard}
+                className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Continue to Dashboard
+              </button>
             </>
           )}
           
-          {/* Debug information in development */}
-          {(debugInfo.authConfig?.domain?.includes('localhost') || process.env.NODE_ENV === 'development') && (
+          {/* Debug information in development or when there are issues */}
+          {(debugInfo.authConfig?.domain?.includes('localhost') || process.env.NODE_ENV === 'development' || error) && (
             <div className="mt-6 p-4 bg-gray-100 rounded-lg text-left">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Debug Information:</h3>
-              <pre className="text-xs text-gray-600 overflow-auto">
+              <pre className="text-xs text-gray-600 overflow-auto max-h-40">
                 {JSON.stringify(debugInfo, null, 2)}
               </pre>
             </div>
