@@ -667,6 +667,26 @@ function AppContent() {
 }
 
 function App() {
+  // Critical fix: Handle /confirm route at the top level before any context issues
+  console.log('🔍 App component - Current pathname:', typeof window !== 'undefined' ? window.location.pathname : 'SSR');
+  console.log('🔍 App component - Full URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
+
+  // Emergency route handling for /confirm - bypass all context and routing issues
+  if (typeof window !== 'undefined' && window.location.pathname === '/confirm') {
+    console.log('🚨 EMERGENCY: /confirm route detected at App level - rendering EmailConfirm directly');
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <div className="fixed top-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50">
+          Emergency Route Handler Active 🚨
+        </div>
+        <div className="fixed top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50">
+          EmailConfirm Emergency Mode ✅
+        </div>
+        <EmailConfirm />
+      </div>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

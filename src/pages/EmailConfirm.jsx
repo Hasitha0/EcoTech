@@ -3,7 +3,174 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { createSupabaseClient, getAuthConfig } from '../lib/supabase-config';
 import { displayAuthConfiguration } from '../utils/supabase-auth-config';
 
+// Emergency standalone EmailConfirm component
+const StandaloneEmailConfirm = () => {
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState({});
+
+  console.log('🚨 StandaloneEmailConfirm component loaded in emergency mode');
+
+  useEffect(() => {
+    const confirmEmailStandalone = async () => {
+      try {
+        console.log('🚨 Emergency email confirmation starting...');
+        
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const token = urlParams.get('token');
+        
+        console.log('🚨 Emergency mode - URL params:', { hasCode: !!code, hasToken: !!token });
+        
+        if (!code && !token) {
+          throw new Error('No confirmation code or token found in URL');
+        }
+
+        // Create Supabase client
+        const supabase = createSupabaseClient();
+        
+        setMessage('Processing your email confirmation...');
+        
+        let result;
+        
+        if (code) {
+          console.log('🚨 Emergency mode - Confirming with code...');
+          result = await supabase.auth.verifyOtp({
+            token_hash: code,
+            type: 'email'
+          });
+        } else if (token) {
+          console.log('🚨 Emergency mode - Confirming with token...');
+          result = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: 'email'
+          });
+        }
+
+        console.log('🚨 Emergency mode - Confirmation result:', result);
+
+        if (result.error) {
+          throw result.error;
+        }
+
+        if (result.data?.user) {
+          console.log('🚨 Emergency mode - Email confirmed for user:', result.data.user.id);
+          setMessage('Email confirmed successfully! Creating your profile...');
+          
+          // Try to create a basic profile
+          try {
+            const profileData = {
+              id: result.data.user.id,
+              name: result.data.user.email.split('@')[0],
+              email: result.data.user.email,
+              role: 'PUBLIC',
+              status: 'active',
+              district: 'Gampaha',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .insert([profileData])
+              .select()
+              .single();
+
+            if (profileError) {
+              console.log('🚨 Emergency mode - Profile creation failed:', profileError);
+              setMessage('Email confirmed! Please log in to complete your profile setup.');
+            } else {
+              console.log('🚨 Emergency mode - Profile created:', profile);
+              setMessage('Email confirmed and profile created successfully! Redirecting...');
+            }
+          } catch (profileError) {
+            console.log('🚨 Emergency mode - Profile creation error:', profileError);
+            setMessage('Email confirmed! Please log in to complete your profile setup.');
+          }
+          
+          // Redirect after 3 seconds
+          setTimeout(() => {
+            console.log('🚨 Emergency mode - Redirecting to home...');
+            window.location.href = '/';
+          }, 3000);
+        } else {
+          throw new Error('Email confirmation completed but no user data received');
+        }
+
+      } catch (error) {
+        console.error('🚨 Emergency mode - Error:', error);
+        setError(`Failed to confirm email: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    confirmEmailStandalone();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="text-4xl font-bold text-red-500 mb-4">
+            Emergency Email Confirmation
+          </h2>
+          
+          {loading && (
+            <div className="space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+              <p className="text-gray-300">Processing your email confirmation...</p>
+            </div>
+          )}
+          
+          {message && !error && (
+            <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded mb-4">
+              <p>{message}</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded mb-4">
+              <p>{error}</p>
+              <div className="mt-4">
+                <button
+                  onClick={() => window.location.href = '/login'}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors mr-4"
+                >
+                  Go to Login
+                </button>
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors"
+                >
+                  Go Home
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const EmailConfirm = () => {
+  // Check if we're in emergency mode (no router context available)
+  try {
+    // Try to use router hooks - if they fail, we're in emergency mode
+    const navigate = useNavigate();
+    const location = useLocation();
+    
+    // If we get here, router context is available, use the full component
+    console.log('🔍 EmailConfirm - Router context available, using full component');
+  } catch (error) {
+    // Router context not available, use standalone component
+    console.log('🚨 EmailConfirm - No router context, using emergency standalone component');
+    return <StandaloneEmailConfirm />;
+  }
+  
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
