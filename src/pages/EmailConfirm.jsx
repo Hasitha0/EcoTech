@@ -18,6 +18,18 @@ const EmailConfirm = () => {
   // Add immediate console log to verify component is rendering
   console.log('🎯 EmailConfirm component is rendering!', { pathname: location.pathname, search: location.search });
 
+  // Add alert to make sure component is loading (temporary debugging)
+  useEffect(() => {
+    console.log('🚨 EmailConfirm useEffect triggered - Component is definitely loading!');
+    // Temporary visual confirmation
+    const timer = setTimeout(() => {
+      if (!hasProcessed) {
+        console.log('🚨 Component loaded but confirmation not processed yet');
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Memoize navigation functions to prevent re-renders
   const handleGoToLogin = useCallback(() => {
     console.log('🔄 Navigating to login...');

@@ -17,6 +17,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import React, { useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import ErrorBoundary from './components/ErrorBoundary';
+import { AuthProvider } from './context/AuthContext';
 
 // Email confirmation handler component
 function EmailConfirmationHandler() {
@@ -552,6 +553,23 @@ function AppContent() {
             
             {/* Temporary debug route */}
             <Route path="/debug-auth" element={<DebugAuthPage />} />
+            
+            {/* Catch-all route for debugging */}
+            <Route path="*" element={
+              <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+                <div className="text-center">
+                  <h1 className="text-4xl font-bold text-red-500 mb-4">Route Not Found</h1>
+                  <p className="text-gray-300 mb-4">Current path: {location.pathname}</p>
+                  <p className="text-gray-300 mb-4">Search params: {location.search}</p>
+                  <button 
+                    onClick={() => window.location.href = '/'}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Go Home
+                  </button>
+                </div>
+              </div>
+            } />
           </Routes>
         </main>
         
@@ -564,9 +582,11 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <AuthProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
