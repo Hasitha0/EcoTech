@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Hero from '../components/Hero';
 import RequestPickupForm from '../components/RequestPickupForm';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,7 @@ import { TextReveal } from '../components/ui/text-reveal';
 import { AnimatedShinyText } from '../components/ui/animated-shiny-text';
 import { ShineEffect } from '../components/ui/shine-effect';
 import { WarpBackground } from '../components/ui/warp-background';
+import { displayAuthConfiguration, validateAuthConfig } from '../utils/supabase-auth-config';
 
 
 // How It Works Steps Data
@@ -216,6 +217,13 @@ const Home = () => {
       </div>
     );
   };
+
+  useEffect(() => {
+    // In development or localhost, display auth configuration
+    if (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development') {
+      validateAuthConfig();
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-black">

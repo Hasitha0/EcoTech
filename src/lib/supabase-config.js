@@ -9,18 +9,26 @@ const getCurrentDomain = () => {
   if (typeof window !== 'undefined') {
     return window.location.origin;
   }
-  // Detect Vercel environment
+  
+  // Check for various Vercel environment variables
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  // Production fallback URL
-  return 'https://eco-tech-copy-1kjbhknf8-hasitha0s-projects.vercel.app';
+  
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+  }
+  
+  // Production fallback URL (update this to your actual production URL)
+  return 'https://eco-tech-copy-7f3kavq1o-hasitha0s-projects.vercel.app';
 };
 
 // Create Supabase client
 export const createSupabaseClient = () => {
   const supabaseUrl = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
   const currentDomain = getCurrentDomain();
+  
+  console.log('Creating Supabase client with domain:', currentDomain);
   
   const client = createClient(supabaseUrl, SUPABASE_ANON_KEY, {
     auth: {
@@ -31,12 +39,13 @@ export const createSupabaseClient = () => {
       // Configure redirect URLs for production
       redirectTo: `${currentDomain}/auth/callback`,
       // Handle email confirmation redirects
-      confirmEmailRedirectTo: `${currentDomain}/auth/confirm`
+      confirmEmailRedirectTo: `${currentDomain}/confirm`
     },
     global: {
       headers: {
         'X-Client-Info': 'ecotech-web-app',
-        'Access-Control-Allow-Origin': currentDomain
+        'Access-Control-Allow-Origin': currentDomain,
+        'X-Current-Domain': currentDomain
       }
     },
     db: {
@@ -50,6 +59,24 @@ export const createSupabaseClient = () => {
   });
   
   return client;
+};
+
+// Helper function to get auth configuration
+export const getAuthConfig = () => {
+  const currentDomain = getCurrentDomain();
+  return {
+    domain: currentDomain,
+    redirectUrl: `${currentDomain}/auth/callback`,
+    confirmUrl: `${currentDomain}/confirm`,
+    supabaseUrl: `https://${SUPABASE_PROJECT_ID}.supabase.co`
+  };
+};
+
+// Export project details for debugging
+export const PROJECT_CONFIG = {
+  PROJECT_ID: SUPABASE_PROJECT_ID,
+  SUPABASE_URL: `https://${SUPABASE_PROJECT_ID}.supabase.co`,
+  getCurrentDomain
 };
 
  
