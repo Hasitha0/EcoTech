@@ -86,6 +86,134 @@ const EmailConfirm = () => {
     }
   }, [location.search, supabase.auth]);
 
+  // Function to create user profile after email confirmation
+  const createUserProfileAfterConfirmation = useCallback(async (authUser) => {
+    try {
+      console.log('🔧 Creating user profile after email confirmation for:', authUser.id);
+      
+      // Check if profile already exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing profile:', checkError);
+        throw new Error(`Failed to check existing profile: ${checkError.message}`);
+      }
+
+      if (existingProfile) {
+        console.log('✅ Profile already exists:', existingProfile);
+        return existingProfile;
+      }
+
+      // Check for registration data in localStorage
+      const storedData = localStorage.getItem(`registration_data_${authUser.id}`);
+      let userData = null;
+      
+      if (storedData) {
+        console.log('📦 Found registration data in localStorage');
+        userData = JSON.parse(storedData);
+      } else {
+        console.log('📦 No registration data found, checking all localStorage keys...');
+        // Check for any registration data keys
+        const allKeys = Object.keys(localStorage).filter(key => key.startsWith('registration_data_'));
+        console.log('Available registration data keys:', allKeys);
+        
+        if (allKeys.length > 0) {
+          const firstKey = allKeys[0];
+          const firstData = localStorage.getItem(firstKey);
+          const firstUserData = JSON.parse(firstData);
+          
+          // Check if email matches
+          if (firstUserData.email === authUser.email) {
+            console.log('📦 Found matching registration data by email');
+            userData = firstUserData;
+            // Clean up the old key and store with correct user ID
+            localStorage.removeItem(firstKey);
+            localStorage.setItem(`registration_data_${authUser.id}`, firstData);
+          }
+        }
+      }
+
+      // If no registration data found, create a basic profile
+      if (!userData) {
+        console.log('📦 No registration data found, creating basic profile');
+        userData = {
+          name: authUser.user_metadata?.name || authUser.email.split('@')[0],
+          email: authUser.email,
+          role: 'PUBLIC',
+          phone: null,
+          address: null,
+          city: null
+        };
+      }
+
+      console.log('📦 User data for profile creation:', userData);
+
+      // Prepare address fields
+      const fullAddress = userData.address || 
+        (userData.addressLine1 ? 
+          `${userData.addressLine1}${userData.addressLine2 ? ', ' + userData.addressLine2 : ''}, ${userData.city}` 
+          : null);
+
+      // Create the profile data object
+      const profileData = {
+        id: authUser.id,
+        name: userData.name || authUser.email.split('@')[0],
+        email: authUser.email,
+        role: userData.role || 'PUBLIC',
+        phone: userData.phone || null,
+        status: (userData.role === 'PUBLIC' || !userData.role) ? 'active' : 'pending_approval',
+        address: fullAddress,
+        district: userData.district || 'Gampaha',
+        area: userData.city || userData.area || null,
+        default_pickup_address: fullAddress,
+        // COLLECTOR fields
+        experience: userData.experience || null,
+        vehicle_type: userData.vehicleType || null,
+        license_number: userData.licenseNumber || null,
+        coverage_area: userData.coverageArea || null,
+        availability: userData.availability || null,
+        preferred_schedule: userData.preferredSchedule || null,
+        additional_info: userData.additionalInfo || null,
+        // RECYCLING_CENTER fields
+        center_name: userData.centerName || null,
+        operating_hours: userData.operatingHours || null,
+        accepted_materials: userData.acceptedMaterials || null,
+        capacity: userData.capacity || null
+      };
+
+      console.log('📦 Profile data to insert:', profileData);
+
+      // Insert the profile
+      const { data: insertedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .insert([profileData])
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('❌ Profile creation failed:', profileError);
+        throw new Error(`Failed to create profile: ${profileError.message}`);
+      }
+
+      console.log('✅ Profile created successfully:', insertedProfile);
+
+      // Clean up registration data
+      if (storedData) {
+        localStorage.removeItem(`registration_data_${authUser.id}`);
+        console.log('🧹 Cleaned up registration data from localStorage');
+      }
+
+      return insertedProfile;
+    } catch (error) {
+      console.error('❌ Profile creation error:', error);
+      throw error;
+    }
+  }, [supabase]);
+
   // Main confirmation logic - memoized to prevent infinite loops
   const confirmEmail = useCallback(async () => {
     // Prevent multiple executions
@@ -175,18 +303,37 @@ const EmailConfirm = () => {
 
       if (result.data?.user) {
         console.log('✅ Email confirmed successfully for user:', result.data.user.id);
-        setMessage('Email confirmed successfully! You are now logged in.');
+        setMessage('Email confirmed successfully! Setting up your profile...');
         
-        // Wait a moment then redirect to dashboard
-        setTimeout(() => {
-          console.log('🔄 Redirecting to dashboard...');
-          if (navigate) {
-            navigate('/dashboard');
-          } else {
-            // Fallback if navigate is not available
-            window.location.href = '/dashboard';
-          }
-        }, 2000);
+        // Create user profile after successful email confirmation
+        try {
+          const profile = await createUserProfileAfterConfirmation(result.data.user);
+          console.log('✅ User profile created:', profile);
+          setMessage('Email confirmed and profile created successfully! You are now logged in.');
+          
+          // Wait a moment then redirect to dashboard
+          setTimeout(() => {
+            console.log('🔄 Redirecting to dashboard...');
+            if (navigate) {
+              navigate('/dashboard');
+            } else {
+              // Fallback if navigate is not available
+              window.location.href = '/dashboard';
+            }
+          }, 2000);
+        } catch (profileError) {
+          console.error('❌ Profile creation failed:', profileError);
+          setMessage('Email confirmed successfully, but there was an issue creating your profile. Please try logging in.');
+          
+          setTimeout(() => {
+            console.log('🔄 Redirecting to login due to profile creation failure...');
+            if (navigate) {
+              navigate('/login');
+            } else {
+              window.location.href = '/login';
+            }
+          }, 3000);
+        }
       } else {
         throw new Error('Email confirmation completed but no user data received');
       }
@@ -213,7 +360,7 @@ const EmailConfirm = () => {
     } finally {
       setLoading(false);
     }
-  }, [hasProcessed, location.search, location.pathname, navigate, supabase.auth]);
+  }, [hasProcessed, location.search, location.pathname, navigate, supabase.auth, createUserProfileAfterConfirmation]);
 
   // Single useEffect with proper dependencies
   useEffect(() => {
