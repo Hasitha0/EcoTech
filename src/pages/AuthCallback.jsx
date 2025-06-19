@@ -28,10 +28,12 @@ const AuthCallback = () => {
         const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token');
         const tokenType = urlParams.get('token_type') || hashParams.get('token_type');
         const type = urlParams.get('type') || hashParams.get('type');
+        const tokenHash = urlParams.get('token_hash') || hashParams.get('token_hash');
         
         console.log('🔍 Tokens found:', {
           hasAccessToken: !!accessToken,
           hasRefreshToken: !!refreshToken,
+          hasTokenHash: !!tokenHash,
           tokenType,
           type
         });
@@ -39,12 +41,113 @@ const AuthCallback = () => {
         setDebugInfo({
           url: window.location.href,
           hasTokens: !!(accessToken && refreshToken),
+          hasTokenHash: !!tokenHash,
           type,
           tokenType
         });
 
-        // If we have tokens, set the session
-        if (accessToken && refreshToken) {
+        // Handle token_hash (PKCE flow) for email confirmation
+        if (tokenHash && type === 'email') {
+          console.log('✅ Processing token_hash for email confirmation...');
+          setMessage('Verifying your email confirmation...');
+          
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'email'
+          });
+
+          if (error) {
+            console.error('❌ Error verifying email token:', error);
+            throw error;
+          }
+
+          console.log('✅ Email verification successful:', data.user?.id);
+          
+          // Clean up URL
+          window.history.replaceState(null, null, window.location.pathname);
+          
+          // Wait a moment for auth context to update
+          setMessage('Email confirmed! Setting up your account...');
+          
+          // Force refresh the auth context
+          try {
+            await refreshUser();
+            console.log('✅ Auth context refreshed');
+          } catch (refreshError) {
+            console.error('Auth context refresh error:', refreshError);
+          }
+          
+          // Continue with profile creation logic...
+          setTimeout(async () => {
+            try {
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', data.user.id)
+                .single();
+
+              if (profileError && profileError.code === 'PGRST116') {
+                // No profile exists, try to create one
+                console.log('🔧 No profile found, checking registration data...');
+                
+                const registrationData = localStorage.getItem(`registration_data_${data.user.id}`);
+                if (registrationData) {
+                  console.log('✅ Found registration data, creating profile...');
+                  const userData = JSON.parse(registrationData);
+                  await triggerProfileCreation(userData);
+                  localStorage.removeItem(`registration_data_${data.user.id}`);
+                } else {
+                  // Create basic profile for PUBLIC user
+                  console.log('No registration data, creating basic PUBLIC profile...');
+                  const basicUserData = {
+                    name: data.user.email.split('@')[0],
+                    email: data.user.email,
+                    role: 'PUBLIC',
+                    phone: null,
+                    address: null,
+                    city: null
+                  };
+                  await triggerProfileCreation(basicUserData);
+                }
+              }
+
+              setStatus('success');
+              setMessage('🎉 Email confirmed successfully! You will be redirected to the login page.');
+              
+              // Start countdown for redirect to login page
+              const countdownInterval = setInterval(() => {
+                setCountdown(prev => {
+                  if (prev <= 1) {
+                    clearInterval(countdownInterval);
+                    // Redirect to login page with success message
+                    navigate('/login?confirmed=true&message=Email confirmed successfully! You can now sign in.');
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+
+            } catch (profileError) {
+              console.error('❌ Profile creation error:', profileError);
+              setStatus('success'); // Still consider email confirmation successful
+              setMessage('Email confirmed! Redirecting to login page...');
+              
+              // Start countdown for redirect to login page
+              const countdownInterval = setInterval(() => {
+                setCountdown(prev => {
+                  if (prev <= 1) {
+                    clearInterval(countdownInterval);
+                    // Redirect to login page with success message
+                    navigate('/login?confirmed=true&message=Email confirmed successfully! You can now sign in.');
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+            }
+          }, 1000);
+
+        } else if (accessToken && refreshToken) {
           console.log('✅ Setting session with URL tokens...');
           setMessage('Confirming your email...');
           

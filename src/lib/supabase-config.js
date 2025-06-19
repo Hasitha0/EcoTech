@@ -20,7 +20,7 @@ const getCurrentDomain = () => {
   }
   
   // Production fallback URL (update this to your actual production URL)
-  return 'https://eco-tech-copy-7f3kavq1o-hasitha0s-projects.vercel.app';
+  return 'https://eco-tech-copy-nutr9iucy-hasitha0s-projects.vercel.app';
 };
 
 // Create Supabase client
@@ -36,10 +36,10 @@ export const createSupabaseClient = () => {
       persistSession: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
-      // Configure redirect URLs for production
+      // Configure redirect URLs for production - both go to auth/callback
       redirectTo: `${currentDomain}/auth/callback`,
-      // Handle email confirmation redirects
-      confirmEmailRedirectTo: `${currentDomain}/confirm`
+      // Handle email confirmation redirects - also go to auth/callback for login page flow
+      confirmEmailRedirectTo: `${currentDomain}/auth/callback`
     },
     global: {
       headers: {
@@ -67,7 +67,7 @@ export const getAuthConfig = () => {
   return {
     domain: currentDomain,
     redirectUrl: `${currentDomain}/auth/callback`,
-    confirmUrl: `${currentDomain}/confirm`,
+    confirmUrl: `${currentDomain}/auth/callback`, // Both redirect to auth/callback for login page flow
     supabaseUrl: `https://${SUPABASE_PROJECT_ID}.supabase.co`
   };
 };
