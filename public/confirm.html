@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Confirmation - EcoTech</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .status-badge {
+            position: fixed;
+            top: 20px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        
+        .status-badge.left {
+            left: 20px;
+            background: #dc2626;
+        }
+        
+        .status-badge.right {
+            right: 20px;
+            background: #059669;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(16, 185, 129, 0.3);
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .error-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 16px;
+            color: #10b981;
+        }
+        
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #d1d5db;
+            margin-bottom: 16px;
+        }
+        
+        .error-text {
+            color: #f87171;
+        }
+        
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #059669;
+        }
+        
+        .debug-info {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            text-align: left;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        
+        .debug-info h3 {
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+        
+        .debug-info pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-badge left">🚨 NUCLEAR OPTION ACTIVE</div>
+    <div class="status-badge right">✅ Standalone HTML Confirm</div>
+    
+    <div class="container">
+        <div id="loading-state">
+            <div class="spinner"></div>
+            <h1>Confirming Your Email</h1>
+            <p>Please wait while we verify your email address...</p>
+            <p id="current-url"></p>
+        </div>
+        
+        <div id="success-state" style="display: none;">
+            <div class="success-icon">✅</div>
+            <h1>Email Confirmed!</h1>
+            <p>Welcome to EcoTech! Your account has been successfully verified.</p>
+            <p>Redirecting you to the main app...</p>
+        </div>
+        
+        <div id="error-state" style="display: none;">
+            <div class="error-icon">❌</div>
+            <h1>Confirmation Failed</h1>
+            <p>We couldn't confirm your email address. This might be because:</p>
+            <ul style="text-align: left; margin: 20px 0;">
+                <li>• The confirmation link has expired</li>
+                <li>• The link has already been used</li>
+                <li>• The link is invalid</li>
+            </ul>
+            <p class="error-text" id="error-message"></p>
+            <button onclick="window.location.href = '/register'">Try Registering Again</button>
+        </div>
+        
+        <div class="debug-info">
+            <h3>Debug Information</h3>
+            <div id="debug-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://ovjjujxnxlxqcjhnnmbs.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92ampqanhuenhseHFjamhubm1icyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzM0NTUxODU3LCJleHAiOjIwNTAxMjc4NTd9.T6VTnWnZr5_Oy_CKT7qkjqRwgYMgDCfOK7sTI7fTqLo';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // Debug logging
+        const debugInfo = {
+            url: window.location.href,
+            pathname: window.location.pathname,
+            search: window.location.search,
+            hash: window.location.hash,
+            timestamp: new Date().toISOString()
+        };
+        
+        console.log('🚨 NUCLEAR OPTION: Standalone HTML email confirmation');
+        console.log('Debug info:', debugInfo);
+        
+        // Update current URL display
+        document.getElementById('current-url').textContent = `URL: ${window.location.href}`;
+        
+        // Extract token from URL
+        function extractToken() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fragment = window.location.hash.substring(1);
+            const fragmentParams = new URLSearchParams(fragment);
+            
+            const code = urlParams.get('code') || fragmentParams.get('access_token');
+            const token = urlParams.get('token') || urlParams.get('token_hash');
+            const type = urlParams.get('type') || 'email';
+            
+            return { code, token, type };
+        }
+        
+        // Create user profile
+        async function createUserProfile(user) {
+            try {
+                console.log('Creating user profile for:', user.id);
+                
+                // Check if profile already exists
+                const { data: existingProfile, error: checkError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (checkError && checkError.code !== 'PGRST116') {
+                    throw checkError;
+                }
+
+                if (existingProfile) {
+                    console.log('Profile already exists');
+                    return existingProfile;
+                }
+
+                // Get registration data
+                let registrationData = {};
+                try {
+                    const storedData = localStorage.getItem('registration-data') || 
+                                      sessionStorage.getItem('registration-data');
+                    if (storedData) {
+                        registrationData = JSON.parse(storedData);
+                    }
+                } catch (e) {
+                    console.log('No registration data found');
+                }
+
+                // Create profile
+                const profileData = {
+                    id: user.id,
+                    email: user.email,
+                    full_name: registrationData.fullName || user.user_metadata?.full_name || '',
+                    username: registrationData.username || user.email?.split('@')[0] || '',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                const { data: newProfile, error: insertError } = await supabase
+                    .from('profiles')
+                    .insert([profileData])
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    throw insertError;
+                }
+
+                console.log('Profile created successfully');
+                
+                // Clean up registration data
+                localStorage.removeItem('registration-data');
+                sessionStorage.removeItem('registration-data');
+
+                return newProfile;
+            } catch (error) {
+                console.error('Profile creation error:', error);
+                throw error;
+            }
+        }
+        
+        // Main confirmation function
+        async function confirmEmail() {
+            try {
+                const tokenInfo = extractToken();
+                debugInfo.tokenInfo = tokenInfo;
+                
+                if (!tokenInfo.code && !tokenInfo.token) {
+                    throw new Error('No confirmation code or token found in URL');
+                }
+
+                console.log('Attempting confirmation with Supabase');
+
+                let result;
+                
+                if (tokenInfo.code) {
+                    result = await supabase.auth.verifyOtp({
+                        token_hash: tokenInfo.code,
+                        type: tokenInfo.type
+                    });
+                } else if (tokenInfo.token) {
+                    result = await supabase.auth.verifyOtp({
+                        token_hash: tokenInfo.token,
+                        type: tokenInfo.type
+                    });
+                }
+
+                debugInfo.supabaseResult = {
+                    hasSession: !!result?.data?.session,
+                    hasUser: !!result?.data?.user,
+                    error: result?.error?.message
+                };
+
+                if (result?.error) {
+                    throw result.error;
+                }
+
+                if (!result?.data?.session) {
+                    throw new Error('No session returned from confirmation');
+                }
+
+                const { session, user } = result.data;
+                debugInfo.user = { id: user.id, email: user.email };
+
+                console.log('Email confirmed successfully');
+
+                // Create user profile
+                await createUserProfile(user);
+
+                // Show success state
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('success-state').style.display = 'block';
+
+                // Redirect to main app
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+
+            } catch (error) {
+                console.error('Confirmation error:', error);
+                debugInfo.error = { message: error.message, code: error.code };
+                
+                // Show error state
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('error-state').style.display = 'block';
+                document.getElementById('error-message').textContent = error.message;
+            } finally {
+                // Update debug info
+                document.getElementById('debug-content').innerHTML = `<pre>${JSON.stringify(debugInfo, null, 2)}</pre>`;
+            }
+        }
+        
+        // Start confirmation process
+        confirmEmail();
+    </script>
+</body>
+</html> 
