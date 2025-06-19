@@ -490,7 +490,19 @@ function AppContent() {
   useEffect(() => {
     console.log('🔍 AppContent - Current location:', location.pathname);
     console.log('🔍 AppContent - Full location:', location);
+    console.log('🔍 AppContent - Search params:', location.search);
+    console.log('🔍 AppContent - Available routes: /, /about, /confirm, /auth/confirm, /dashboard, etc.');
   }, [location]);
+  
+  // Special handling for /confirm route
+  if (location.pathname === '/confirm') {
+    console.log('🎯 Direct /confirm route detected - rendering EmailConfirm component');
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <EmailConfirm />
+      </div>
+    );
+  }
   
   // Hide navbar for all authenticated users on dashboard routes and registration-pending page
   const shouldHideNavbar = (user && location.pathname.startsWith('/dashboard')) || 
@@ -515,6 +527,18 @@ function AppContent() {
         
         <main className="flex-grow">
           <Routes>
+            {/* Simple test route to verify routing works */}
+            <Route path="/simple-test" element={
+              <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+                <div className="text-center">
+                  <h1 className="text-4xl font-bold text-emerald-500 mb-4">Simple Test Route Works! ✅</h1>
+                  <p className="text-gray-300 mb-4">If you can see this, routing is working correctly.</p>
+                  <p className="text-gray-300 mb-4">Current path: {location.pathname}</p>
+                  <p className="text-gray-300 mb-4">Search params: {location.search}</p>
+                </div>
+              </div>
+            } />
+            
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/recycling-center" element={<div className="container mx-auto px-4 py-24 text-white">Recycling Center Staff Page</div>} />
