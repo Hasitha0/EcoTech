@@ -58,6 +58,26 @@ const AuthCallback = () => {
 
           if (error) {
             console.error('❌ Error verifying email token:', error);
+            
+            // Handle specific error types
+            if (error.message.includes('expired') || error.message.includes('invalid')) {
+              setStatus('error');
+              setMessage('⏰ Your email confirmation link has expired. Please register again or request a new confirmation email.');
+              
+              // Redirect to registration page after countdown
+              const countdownInterval = setInterval(() => {
+                setCountdown(prev => {
+                  if (prev <= 1) {
+                    clearInterval(countdownInterval);
+                    navigate('/register?error=expired&message=Email confirmation link expired. Please try registering again.');
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+              return;
+            }
+            
             throw error;
           }
 
@@ -328,6 +348,27 @@ const AuthCallback = () => {
     navigate('/register');
   };
 
+  const handleResendConfirmation = async () => {
+    const email = prompt('Please enter your email address to resend confirmation:');
+    if (email) {
+      try {
+        setMessage('Sending new confirmation email...');
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: email
+        });
+        
+        if (error) {
+          setMessage(`Error: ${error.message}`);
+        } else {
+          setMessage('✅ New confirmation email sent! Please check your inbox.');
+        }
+      } catch (err) {
+        setMessage(`Error: ${err.message}`);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-900 dark:to-slate-800">
       <div className="max-w-md w-full mx-4">
@@ -397,12 +438,23 @@ const AuthCallback = () => {
               Go to Login Page Now
             </button>
             {status === 'error' && (
-              <button
-                onClick={handleGoRegister}
-                className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                Try Registering Again
-              </button>
+              <>
+                <button
+                  onClick={handleGoRegister}
+                  className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Try Registering Again
+                </button>
+                {message.includes('expired') && (
+                  <button
+                    onClick={handleResendConfirmation}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span>📧</span>
+                    Resend Confirmation Email
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -99,6 +99,15 @@
             font-size: 14px;
             color: #92400e;
         }
+        .admin-note {
+            background-color: #eff6ff;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 12px;
+            color: #1d4ed8;
+        }
         @media (max-width: 600px) {
             body {
                 padding: 10px;
@@ -127,7 +136,7 @@
         </div>
         
         <div class="button-container">
-            <a href="https://eco-tech-copy-nutr9iucy-hasitha0s-projects.vercel.app/auth/callback?token_hash={{ .TokenHash }}&type=email" class="confirm-button">
+            <a href="{{ .ConfirmationURL }}" class="confirm-button">
                 ✅ Confirm My Account
             </a>
         </div>
@@ -135,7 +144,7 @@
         <div class="alternative-link">
             <strong>Button not working?</strong> Copy and paste this link into your browser:
             <br><br>
-            <code>https://eco-tech-copy-nutr9iucy-hasitha0s-projects.vercel.app/auth/callback?token_hash={{ .TokenHash }}&type=email</code>
+            <code>{{ .ConfirmationURL }}</code>
         </div>
         
         <div class="security-note">
@@ -154,6 +163,10 @@
             <p><strong>Next Steps:</strong> After confirming your email, you'll be redirected to the login page where you can sign in with your credentials.</p>
         </div>
         
+        <div class="admin-note">
+            <strong>📝 Admin Note:</strong> Make sure to configure the Site URL in Supabase Dashboard → Authentication → URL Configuration to: <code>https://eco-tech-copy-jb8tuqh72-hasitha0s-projects.vercel.app</code> (or your custom domain)
+        </div>
+        
         <div class="footer">
             <p>Thank you for choosing EcoTech!</p>
             <p>If you have any questions, feel free to contact our support team.</p>
@@ -163,4 +176,19 @@
         </div>
     </div>
 </body>
-</html> 
+</html>
+
+<!-- 
+IMPORTANT: Configure Supabase Site URL
+========================================
+To make this email template work correctly, you need to configure the Site URL in your Supabase dashboard:
+
+1. Go to: https://supabase.com/dashboard/project/ovjjujxnxlxqcjhnnmbs/auth/url-configuration
+2. Set Site URL to: https://eco-tech-copy-jb8tuqh72-hasitha0s-projects.vercel.app
+3. Add Redirect URLs:
+   - https://eco-tech-copy-jb8tuqh72-hasitha0s-projects.vercel.app/auth/callback
+   - https://eco-tech-copy-jb8tuqh72-hasitha0s-projects.vercel.app/login
+   - https://eco-tech-copy-jb8tuqh72-hasitha0s-projects.vercel.app/confirm
+
+The {{ .ConfirmationURL }} will then automatically redirect to the correct URL.
+--> 
