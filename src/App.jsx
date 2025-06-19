@@ -554,6 +554,70 @@ function AppContent() {
             {/* Temporary debug route */}
             <Route path="/debug-auth" element={<DebugAuthPage />} />
             
+            {/* Comprehensive debug route for URL testing */}
+            <Route path="/url-debug" element={
+              <div className="min-h-screen bg-slate-950 text-white p-8">
+                <div className="max-w-4xl mx-auto">
+                  <h1 className="text-3xl font-bold mb-8 text-emerald-400">URL Debug Information</h1>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-gray-800 p-6 rounded-lg">
+                      <h2 className="text-xl font-bold mb-4 text-emerald-300">Current URL Information</h2>
+                      <div className="space-y-2 text-sm">
+                        <p><strong>Full URL:</strong> {typeof window !== 'undefined' ? window.location.href : 'N/A'}</p>
+                        <p><strong>Origin:</strong> {typeof window !== 'undefined' ? window.location.origin : 'N/A'}</p>
+                        <p><strong>Pathname:</strong> {location.pathname}</p>
+                        <p><strong>Search:</strong> {location.search}</p>
+                        <p><strong>Hash:</strong> {typeof window !== 'undefined' ? window.location.hash : 'N/A'}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-6 rounded-lg">
+                      <h2 className="text-xl font-bold mb-4 text-emerald-300">URL Parameters</h2>
+                      <div className="space-y-2 text-sm">
+                        {location.search ? (
+                          Object.entries(Object.fromEntries(new URLSearchParams(location.search))).map(([key, value]) => (
+                            <p key={key}><strong>{key}:</strong> {value}</p>
+                          ))
+                        ) : (
+                          <p>No search parameters found</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-6 rounded-lg">
+                      <h2 className="text-xl font-bold mb-4 text-emerald-300">Hash Parameters</h2>
+                      <div className="space-y-2 text-sm">
+                        {typeof window !== 'undefined' && window.location.hash ? (
+                          Object.entries(Object.fromEntries(new URLSearchParams(window.location.hash.substring(1)))).map(([key, value]) => (
+                            <p key={key}><strong>{key}:</strong> {value}</p>
+                          ))
+                        ) : (
+                          <p>No hash parameters found</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-6 rounded-lg">
+                      <h2 className="text-xl font-bold mb-4 text-emerald-300">Test Links</h2>
+                      <div className="space-y-2">
+                        <a href="/confirm?code=test123" className="block text-emerald-400 hover:text-emerald-300">Test /confirm with code parameter</a>
+                        <a href="/auth/confirm?token=test456" className="block text-emerald-400 hover:text-emerald-300">Test /auth/confirm with token parameter</a>
+                        <a href="/confirm#access_token=test&refresh_token=test" className="block text-emerald-400 hover:text-emerald-300">Test /confirm with hash parameters</a>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => window.location.href = '/'}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded"
+                    >
+                      Go Home
+                    </button>
+                  </div>
+                </div>
+              </div>
+            } />
+            
             {/* Catch-all route for debugging */}
             <Route path="*" element={
               <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
