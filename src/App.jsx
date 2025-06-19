@@ -12,6 +12,7 @@ import LearnPage from './pages/LearnPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AuthCallback from './pages/AuthCallback';
 import EmailConfirm from './pages/EmailConfirm';
+import SimpleConfirmTest from './pages/SimpleConfirmTest';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import React, { useEffect } from 'react';
@@ -496,10 +497,10 @@ function AppContent() {
   
   // Special handling for /confirm route
   if (location.pathname === '/confirm') {
-    console.log('🎯 Direct /confirm route detected - rendering EmailConfirm component');
+    console.log('🎯 Direct /confirm route detected - rendering SimpleConfirmTest component');
     return (
       <div className="min-h-screen bg-slate-950">
-        <EmailConfirm />
+        <SimpleConfirmTest />
       </div>
     );
   }
@@ -552,7 +553,8 @@ function AppContent() {
             <Route path="/email-confirmed" element={<EmailConfirmationHandler />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/confirm" element={<EmailConfirm />} />
-            <Route path="/confirm" element={<EmailConfirm />} />
+            <Route path="/confirm" element={<SimpleConfirmTest />} />
+            <Route path="/confirm-real" element={<EmailConfirm />} />
             {/* Debug route to test routing */}
             <Route path="/test-route" element={<div className="min-h-screen flex items-center justify-center bg-slate-950 text-white"><h1>Test Route Works!</h1></div>} />
             <Route path="/registration-pending" element={

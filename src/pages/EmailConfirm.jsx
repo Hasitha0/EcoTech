@@ -5,6 +5,14 @@ import { displayAuthConfiguration } from '../utils/supabase-auth-config';
 import { supabase } from '../lib/supabase-config';
 import { errorHandler } from '../utils/errorHandler';
 
+// IMMEDIATE DEBUG ALERT
+console.log('🚨🚨🚨 EmailConfirm.jsx FILE IS LOADING! 🚨🚨🚨');
+if (typeof window !== 'undefined') {
+  console.log('🚨 Current URL when EmailConfirm loads:', window.location.href);
+  // Add a visible indicator that this component is loading
+  document.title = '🚨 EMAIL CONFIRM LOADING 🚨';
+}
+
 // Emergency standalone EmailConfirm component
 const StandaloneEmailConfirm = () => {
   const [loading, setLoading] = useState(true);
@@ -121,6 +129,10 @@ const StandaloneEmailConfirm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950">
+      {/* SUPER OBVIOUS DEBUG INDICATOR FOR STANDALONE */}
+      <div className="fixed top-0 left-0 right-0 bg-purple-600 text-white text-center py-4 z-50 text-xl font-bold">
+        🚨 STANDALONE EMAIL CONFIRM IS LOADING! 🚨
+      </div>
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="text-4xl font-bold text-red-500 mb-4">
@@ -591,11 +603,14 @@ const EmailConfirm = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      {/* Emergency mode indicators */}
-      <div className="fixed top-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50">
+      {/* SUPER OBVIOUS DEBUG INDICATORS */}
+      <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-center py-4 z-50 text-xl font-bold">
+        🚨 EMAIL CONFIRM COMPONENT IS LOADING! 🚨
+      </div>
+      <div className="fixed top-16 left-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50">
         Emergency Route Handler Active 🚨
       </div>
-      <div className="fixed top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50">
+      <div className="fixed top-16 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50">
         EmailConfirm Emergency Mode ✅
       </div>
       
