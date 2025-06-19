@@ -1,7 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createSupabaseClient, getAuthConfig } from '../lib/supabase-config';
 import { displayAuthConfiguration } from '../utils/supabase-auth-config';
+import { supabase } from '../lib/supabase-config';
+import { errorHandler } from '../utils/errorHandler';
 
 // Emergency standalone EmailConfirm component
 const StandaloneEmailConfirm = () => {
@@ -171,9 +173,9 @@ const EmailConfirm = () => {
     return <StandaloneEmailConfirm />;
   }
   
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [confirmationStatus, setConfirmationStatus] = useState('processing');
+  const [error, setError] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
   const [debugInfo, setDebugInfo] = useState({});
   const [hasProcessed, setHasProcessed] = useState(false);
   const navigate = useNavigate();
@@ -253,373 +255,352 @@ const EmailConfirm = () => {
     }
   }, [location.search, supabase.auth]);
 
-  // Function to create user profile after email confirmation
-  const createUserProfileAfterConfirmation = useCallback(async (authUser) => {
-    try {
-      console.log('🔧 Creating user profile after email confirmation for:', authUser.id);
+  // Enhanced logging for new tab debugging
+  const logInfo = useCallback((message, data = {}) => {
+    console.log(`🔍 EmailConfirm: ${message}`, data);
+    setDebugInfo(prev => ({
+      ...prev,
+      [`${Date.now()}`]: { message, data, timestamp: new Date().toISOString() }
+    }));
+  }, []);
+
+  // Check if we're in a new tab and handle cross-tab communication
+  const checkNewTabContext = useCallback(() => {
+    const isNewTab = !window.opener && window.history.length === 1;
+    const referrer = document.referrer;
+    const hasSessionStorage = sessionStorage.getItem('eco-tech-session');
+    
+    logInfo('New tab context check', {
+      isNewTab,
+      referrer,
+      hasSessionStorage: !!hasSessionStorage,
+      windowOpener: !!window.opener,
+      historyLength: window.history.length,
+      url: window.location.href
+    });
+
+    // If we're in a new tab, try to communicate with parent window
+    if (isNewTab && !hasSessionStorage) {
+      logInfo('Detected new tab without session context - setting up cross-tab communication');
       
+      // Set a flag that we're processing email confirmation
+      sessionStorage.setItem('email-confirmation-processing', 'true');
+      localStorage.setItem('email-confirmation-processing', JSON.stringify({
+        url: window.location.href,
+        timestamp: Date.now()
+      }));
+    }
+
+    return { isNewTab, referrer, hasSessionStorage };
+  }, [logInfo]);
+
+  // Enhanced token extraction
+  const extractTokenFromURL = useCallback(() => {
+    logInfo('Extracting token from URL');
+    const urlParams = new URLSearchParams(window.location.search);
+    const fragment = window.location.hash.substring(1);
+    const fragmentParams = new URLSearchParams(fragment);
+    
+    // Multiple ways to get the confirmation code/token
+    const code = urlParams.get('code') || fragmentParams.get('access_token');
+    const token = urlParams.get('token') || urlParams.get('token_hash');
+    const type = urlParams.get('type') || 'email';
+    
+    const tokenInfo = {
+      code,
+      token,
+      type,
+      fullURL: window.location.href,
+      search: window.location.search,
+      hash: window.location.hash,
+      allParams: Object.fromEntries(urlParams.entries()),
+      allFragments: Object.fromEntries(fragmentParams.entries())
+    };
+    
+    logInfo('Token extraction complete', tokenInfo);
+    return tokenInfo;
+  }, [logInfo]);
+
+  // Enhanced profile creation with better error handling
+  const createUserProfile = useCallback(async (user) => {
+    logInfo('Creating user profile', { userId: user.id, email: user.email });
+    
+    try {
       // Check if profile already exists
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', authUser.id)
+        .eq('id', user.id)
         .single();
 
       if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking existing profile:', checkError);
-        throw new Error(`Failed to check existing profile: ${checkError.message}`);
+        throw checkError;
       }
 
       if (existingProfile) {
-        console.log('✅ Profile already exists:', existingProfile);
+        logInfo('Profile already exists', existingProfile);
         return existingProfile;
       }
 
-      // Check for registration data in localStorage
-      const storedData = localStorage.getItem(`registration_data_${authUser.id}`);
-      let userData = null;
-      
-      if (storedData) {
-        console.log('📦 Found registration data in localStorage');
-        userData = JSON.parse(storedData);
-      } else {
-        console.log('📦 No registration data found, checking all localStorage keys...');
-        // Check for any registration data keys
-        const allKeys = Object.keys(localStorage).filter(key => key.startsWith('registration_data_'));
-        console.log('Available registration data keys:', allKeys);
-        
-        if (allKeys.length > 0) {
-          const firstKey = allKeys[0];
-          const firstData = localStorage.getItem(firstKey);
-          const firstUserData = JSON.parse(firstData);
-          
-          // Check if email matches
-          if (firstUserData.email === authUser.email) {
-            console.log('📦 Found matching registration data by email');
-            userData = firstUserData;
-            // Clean up the old key and store with correct user ID
-            localStorage.removeItem(firstKey);
-            localStorage.setItem(`registration_data_${authUser.id}`, firstData);
-          }
+      // Get registration data from localStorage/sessionStorage
+      let registrationData = {};
+      try {
+        const storedData = localStorage.getItem('registration-data') || 
+                          sessionStorage.getItem('registration-data');
+        if (storedData) {
+          registrationData = JSON.parse(storedData);
+          logInfo('Found registration data', registrationData);
         }
+      } catch (e) {
+        logInfo('No registration data found or parse error', e.message);
       }
 
-      // If no registration data found, create a basic profile
-      if (!userData) {
-        console.log('📦 No registration data found, creating basic profile');
-        userData = {
-          name: authUser.user_metadata?.name || authUser.email.split('@')[0],
-          email: authUser.email,
-          role: 'PUBLIC',
-          phone: null,
-          address: null,
-          city: null
-        };
-      }
-
-      console.log('📦 User data for profile creation:', userData);
-
-      // Prepare address fields
-      const fullAddress = userData.address || 
-        (userData.addressLine1 ? 
-          `${userData.addressLine1}${userData.addressLine2 ? ', ' + userData.addressLine2 : ''}, ${userData.city}` 
-          : null);
-
-      // Create the profile data object
+      // Create profile with available data
       const profileData = {
-        id: authUser.id,
-        name: userData.name || authUser.email.split('@')[0],
-        email: authUser.email,
-        role: userData.role || 'PUBLIC',
-        phone: userData.phone || null,
-        status: (userData.role === 'PUBLIC' || !userData.role) ? 'active' : 'pending_approval',
-        address: fullAddress,
-        district: userData.district || 'Gampaha',
-        area: userData.city || userData.area || null,
-        default_pickup_address: fullAddress,
-        // COLLECTOR fields
-        experience: userData.experience || null,
-        vehicle_type: userData.vehicleType || null,
-        license_number: userData.licenseNumber || null,
-        coverage_area: userData.coverageArea || null,
-        availability: userData.availability || null,
-        preferred_schedule: userData.preferredSchedule || null,
-        additional_info: userData.additionalInfo || null,
-        // RECYCLING_CENTER fields
-        center_name: userData.centerName || null,
-        operating_hours: userData.operatingHours || null,
-        accepted_materials: userData.acceptedMaterials || null,
-        capacity: userData.capacity || null
+        id: user.id,
+        email: user.email,
+        full_name: registrationData.fullName || user.user_metadata?.full_name || '',
+        username: registrationData.username || user.email?.split('@')[0] || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      console.log('📦 Profile data to insert:', profileData);
+      logInfo('Creating profile with data', profileData);
 
-      // Insert the profile
-      const { data: insertedProfile, error: profileError } = await supabase
+      const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert([profileData])
         .select()
         .single();
 
-      if (profileError) {
-        console.error('❌ Profile creation failed:', profileError);
-        throw new Error(`Failed to create profile: ${profileError.message}`);
+      if (insertError) {
+        throw insertError;
       }
 
-      console.log('✅ Profile created successfully:', insertedProfile);
+      logInfo('Profile created successfully', newProfile);
 
       // Clean up registration data
-      if (storedData) {
-        localStorage.removeItem(`registration_data_${authUser.id}`);
-        console.log('🧹 Cleaned up registration data from localStorage');
-      }
+      localStorage.removeItem('registration-data');
+      sessionStorage.removeItem('registration-data');
 
-      return insertedProfile;
+      return newProfile;
     } catch (error) {
-      console.error('❌ Profile creation error:', error);
+      logInfo('Profile creation error', { error: error.message, code: error.code });
       throw error;
     }
-  }, [supabase]);
+  }, [logInfo]);
 
-  // Main confirmation logic - memoized to prevent infinite loops
-  const confirmEmail = useCallback(async () => {
-    // Prevent multiple executions
+  // Enhanced confirmation process
+  const handleEmailConfirmation = useCallback(async () => {
     if (hasProcessed) {
-      console.log('🔄 Email confirmation already processed, skipping...');
+      logInfo('Already processed, skipping');
       return;
     }
 
+    setHasProcessed(true);
+    logInfo('Starting email confirmation process');
+
     try {
-      console.log('🔍 EmailConfirm component mounted');
-      console.log('🔍 Current location:', location);
-      console.log('🔍 Current URL:', window.location.href);
+      setConfirmationStatus('processing');
       
-      // Add a visual indicator that the component is loaded
-      document.title = 'Email Confirmation - EcoTech';
+      // Check new tab context
+      const tabContext = checkNewTabContext();
       
-      // Mark as processing to prevent re-execution
-      setHasProcessed(true);
+      // Extract token information
+      const tokenInfo = extractTokenFromURL();
       
-      // Get URL parameters from both location.search and window.location.search as fallback
-      const searchParams = location.search || window.location.search;
-      const urlParams = new URLSearchParams(searchParams);
-      const code = urlParams.get('code');
-      const token = urlParams.get('token');
-      const type = urlParams.get('type');
-      
-      // Get auth configuration for debugging
-      const authConfig = getAuthConfig();
-      
-      // Set debug information
-      const debug = {
-        currentUrl: window.location.href,
-        authConfig,
-        urlParams: Object.fromEntries(urlParams.entries()),
-        hasCode: !!code,
-        hasToken: !!token,
-        type,
-        locationSearch: location.search,
-        locationPathname: location.pathname,
-        windowLocationSearch: window.location.search,
-        windowLocationPathname: window.location.pathname,
-        componentMounted: true,
-        timestamp: new Date().toISOString()
-      };
-      setDebugInfo(debug);
-      
-      console.log('🔍 Email confirmation debug info:', debug);
-      
-      // Display required Supabase configuration
-      if (authConfig.domain.includes('localhost')) {
-        console.warn('⚠️ Running on localhost - this might cause redirect issues in production');
-        displayAuthConfiguration();
+      if (!tokenInfo.code && !tokenInfo.token) {
+        throw new Error('No confirmation code or token found in URL');
       }
 
-      if (!code && !token) {
-        throw new Error('No confirmation code or token found in URL. Please check the confirmation link.');
-      }
+      logInfo('Attempting confirmation with Supabase');
 
       let result;
       
-      if (code) {
-        // Handle email confirmation with code (recommended format)
-        console.log('✅ Confirming email with code...');
-        setMessage('Processing your email confirmation...');
-        
+      // Try different confirmation methods
+      if (tokenInfo.code) {
+        logInfo('Using code-based confirmation');
         result = await supabase.auth.verifyOtp({
-          token_hash: code,
-          type: 'email'
+          token_hash: tokenInfo.code,
+          type: tokenInfo.type
         });
-      } else if (token) {
-        // Handle email confirmation with token (fallback)
-        console.log('✅ Confirming email with token...');
-        setMessage('Processing your email confirmation...');
-        
+      } else if (tokenInfo.token) {
+        logInfo('Using token-based confirmation');
         result = await supabase.auth.verifyOtp({
-          token_hash: token,
-          type: 'email'
+          token_hash: tokenInfo.token,
+          type: tokenInfo.type
         });
       }
 
-      console.log('✅ Confirmation result:', result);
+      logInfo('Supabase confirmation result', {
+        hasSession: !!result?.data?.session,
+        hasUser: !!result?.data?.user,
+        error: result?.error?.message
+      });
 
-      if (result.error) {
-        console.error('❌ Confirmation error:', result.error);
+      if (result?.error) {
         throw result.error;
       }
 
-      if (result.data?.user) {
-        console.log('✅ Email confirmed successfully for user:', result.data.user.id);
-        setMessage('Email confirmed successfully! Setting up your profile...');
+      if (!result?.data?.session) {
+        throw new Error('No session returned from confirmation');
+      }
+
+      const { session, user } = result.data;
+      setUserInfo(user);
+
+      logInfo('Email confirmed successfully', { userId: user.id, email: user.email });
+
+      // Create user profile
+      await createUserProfile(user);
+
+      setConfirmationStatus('success');
+
+      // Handle new tab scenario
+      if (tabContext.isNewTab) {
+        logInfo('New tab detected - setting up redirect');
         
-        // Create user profile after successful email confirmation
-        try {
-          const profile = await createUserProfileAfterConfirmation(result.data.user);
-          console.log('✅ User profile created:', profile);
-          setMessage('Email confirmed and profile created successfully! You are now logged in.');
-          
-          // Wait a moment then redirect to dashboard
-          setTimeout(() => {
-            console.log('🔄 Redirecting to dashboard...');
-            if (navigate) {
-              navigate('/dashboard');
-            } else {
-              // Fallback if navigate is not available
-              window.location.href = '/dashboard';
-            }
-          }, 2000);
-        } catch (profileError) {
-          console.error('❌ Profile creation failed:', profileError);
-          setMessage('Email confirmed successfully, but there was an issue creating your profile. Please try logging in.');
-          
-          setTimeout(() => {
-            console.log('🔄 Redirecting to login due to profile creation failure...');
-            if (navigate) {
-              navigate('/login');
-            } else {
-              window.location.href = '/login';
-            }
-          }, 3000);
-        }
+        // Notify other tabs about successful confirmation
+        localStorage.setItem('email-confirmation-success', JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          timestamp: Date.now()
+        }));
+        
+        // Clean up processing flags
+        sessionStorage.removeItem('email-confirmation-processing');
+        localStorage.removeItem('email-confirmation-processing');
+        
+        // Redirect to main app
+        setTimeout(() => {
+          logInfo('Redirecting to main app');
+          window.location.href = '/';
+        }, 3000);
       } else {
-        throw new Error('Email confirmation completed but no user data received');
+        // Regular tab - just redirect
+        setTimeout(() => {
+          logInfo('Redirecting to main app (regular tab)');
+          window.location.href = '/';
+        }, 2000);
       }
 
     } catch (error) {
-      console.error('❌ Email confirmation error:', error);
-      setError(`Failed to confirm email: ${error.message}`);
+      logInfo('Confirmation error', { error: error.message, code: error.code });
+      setError(error.message);
+      setConfirmationStatus('error');
       
-      // Provide helpful error messages
-      if (error.message.includes('Invalid token') || error.message.includes('expired')) {
-        setError('The confirmation link has expired or is invalid. Please request a new confirmation email.');
-      } else if (error.message.includes('already confirmed')) {
-        setError('This email is already confirmed. You can now log in.');
-        setTimeout(() => {
-          if (navigate) {
-            navigate('/login');
-          } else {
-            window.location.href = '/login';
-          }
-        }, 2000);
-      } else if (error.message.includes('No confirmation code')) {
-        setError('Invalid confirmation link format. Please check your email and try again.');
-      }
-    } finally {
-      setLoading(false);
+      // Clean up processing flags on error
+      sessionStorage.removeItem('email-confirmation-processing');
+      localStorage.removeItem('email-confirmation-processing');
     }
-  }, [hasProcessed, location.search, location.pathname, navigate, supabase.auth, createUserProfileAfterConfirmation]);
+  }, [hasProcessed, checkNewTabContext, extractTokenFromURL, createUserProfile, logInfo]);
 
-  // Single useEffect with proper dependencies
+  // Effect to handle confirmation
   useEffect(() => {
-    confirmEmail();
-  }, [confirmEmail]);
+    if (!hasProcessed) {
+      logInfo('EmailConfirm component mounted, starting confirmation');
+      handleEmailConfirmation();
+    }
+  }, [handleEmailConfirmation, hasProcessed, logInfo]);
+
+  // Cross-tab communication listener
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'email-confirmation-success') {
+        logInfo('Received confirmation success from another tab');
+        setConfirmationStatus('success');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [logInfo]);
+
+  const renderStatus = () => {
+    switch (confirmationStatus) {
+      case 'processing':
+        return (
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold text-white mb-2">Confirming Your Email</h2>
+            <p className="text-gray-300">Please wait while we verify your email address...</p>
+            <div className="mt-4 text-sm text-gray-400">
+              <p>URL: {window.location.href}</p>
+              <p>Processing in: {window.opener ? 'Popup/New Tab' : 'Same Tab'}</p>
+            </div>
+          </div>
+        );
+      
+      case 'success':
+        return (
+          <div className="text-center">
+            <div className="text-emerald-500 text-6xl mb-4">✅</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Email Confirmed!</h2>
+            <p className="text-gray-300 mb-4">
+              Welcome to EcoTech, {userInfo?.email}! Your account has been successfully verified.
+            </p>
+            <p className="text-sm text-gray-400">Redirecting you to the main app...</p>
+          </div>
+        );
+      
+      case 'error':
+        return (
+          <div className="text-center">
+            <div className="text-red-500 text-6xl mb-4">❌</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Confirmation Failed</h2>
+            <p className="text-gray-300 mb-4">
+              We couldn't confirm your email address. This might be because:
+            </p>
+            <ul className="text-left text-gray-300 mb-4 space-y-1">
+              <li>• The confirmation link has expired</li>
+              <li>• The link has already been used</li>
+              <li>• The link is invalid</li>
+            </ul>
+            <p className="text-red-400 text-sm mb-4">{error}</p>
+            <button
+              onClick={() => window.location.href = '/register'}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Try Registering Again
+            </button>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950">
-      {/* Visible indicator that EmailConfirm component is loaded */}
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      {/* Emergency mode indicators */}
+      <div className="fixed top-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50">
+        Emergency Route Handler Active 🚨
+      </div>
       <div className="fixed top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50">
-        EmailConfirm Component Loaded ✅
+        EmailConfirm Emergency Mode ✅
       </div>
       
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="text-4xl font-bold text-emerald-500 mb-4">
-            Email Confirmation
-          </h2>
-          
-          {loading && (
-            <div className="space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
-              <p className="text-gray-300">Processing your email confirmation...</p>
+      <div className="max-w-md w-full bg-slate-900 rounded-lg shadow-xl p-8">
+        {renderStatus()}
+        
+        {/* Debug information */}
+        {Object.keys(debugInfo).length > 0 && (
+          <details className="mt-8">
+            <summary className="text-gray-400 cursor-pointer">Debug Information</summary>
+            <div className="mt-2 text-xs text-gray-500 bg-slate-800 p-2 rounded max-h-40 overflow-y-auto">
+              {Object.entries(debugInfo).map(([key, info]) => (
+                <div key={key} className="mb-2">
+                  <strong>{info.message}:</strong>
+                  <pre>{JSON.stringify(info.data, null, 2)}</pre>
+                </div>
+              ))}
             </div>
-          )}
-          
-          {message && !error && (
-            <div className="bg-emerald-900 border border-emerald-700 text-emerald-100 px-4 py-3 rounded mb-4">
-              <p>{message}</p>
-            </div>
-          )}
-          
-          {error && (
-            <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded mb-4">
-              <p>{error}</p>
-              <div className="mt-4 space-x-4">
-                <button
-                  onClick={handleResendConfirmation}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded transition-colors"
-                >
-                  Resend Confirmation
-                </button>
-                <button
-                  onClick={handleGoToLogin}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
-                >
-                  Go to Login
-                </button>
-                <button
-                  onClick={handleGoToRegister}
-                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors"
-                >
-                  Register Again
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {!loading && !error && !message && (
-            <div className="space-y-4">
-              <p className="text-gray-300">Ready to confirm your email.</p>
-              <div className="space-x-4">
-                <button
-                  onClick={handleGoToLogin}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
-                >
-                  Go to Login
-                </button>
-                <button
-                  onClick={handleGoToDashboard}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded transition-colors"
-                >
-                  Go to Dashboard
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Debug information */}
-          {Object.keys(debugInfo).length > 0 && (
-            <details className="mt-8 text-left">
-              <summary className="cursor-pointer text-emerald-400 hover:text-emerald-300">
-                Debug Information (Click to expand)
-              </summary>
-              <div className="mt-4 p-4 bg-gray-800 rounded-lg">
-                <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-auto">
-                  {JSON.stringify(debugInfo, null, 2)}
-                </pre>
-              </div>
-            </details>
-          )}
-        </div>
+          </details>
+        )}
       </div>
     </div>
   );
