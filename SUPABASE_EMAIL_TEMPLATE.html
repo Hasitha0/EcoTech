@@ -127,7 +127,7 @@
         </div>
         
         <div class="button-container">
-            <a href="{{ .SiteURL }}/confirm?code={{ .TokenHash }}" class="confirm-button">
+            <a href="{{ .SiteURL }}/confirm?token_hash={{ .TokenHash }}&type=email" class="confirm-button">
                 ✅ Confirm My Account
             </a>
         </div>
@@ -135,7 +135,7 @@
         <div class="alternative-link">
             <strong>Button not working?</strong> Copy and paste this link into your browser:
             <br><br>
-            <code>{{ .SiteURL }}/confirm?code={{ .TokenHash }}</code>
+            <code>{{ .SiteURL }}/confirm?token_hash={{ .TokenHash }}&type=email</code>
         </div>
         
         <div class="security-note">

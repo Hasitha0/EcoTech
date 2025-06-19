@@ -23,10 +23,11 @@ const StandaloneEmailConfirm = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         const token = urlParams.get('token');
+        const token_hash = urlParams.get('token_hash');
         
-        console.log('🚨 Emergency mode - URL params:', { hasCode: !!code, hasToken: !!token });
+        console.log('🚨 Emergency mode - URL params:', { hasCode: !!code, hasToken: !!token, hasTokenHash: !!token_hash });
         
-        if (!code && !token) {
+        if (!code && !token && !token_hash) {
           throw new Error('No confirmation code or token found in URL');
         }
 
@@ -37,7 +38,13 @@ const StandaloneEmailConfirm = () => {
         
         let result;
         
-        if (code) {
+        if (token_hash) {
+          console.log('🚨 Emergency mode - Confirming with token_hash...');
+          result = await supabase.auth.verifyOtp({
+            token_hash: token_hash,
+            type: 'email'
+          });
+        } else if (code) {
           console.log('🚨 Emergency mode - Confirming with code...');
           result = await supabase.auth.verifyOtp({
             token_hash: code,
@@ -303,12 +310,14 @@ const EmailConfirm = () => {
     
     // Multiple ways to get the confirmation code/token
     const code = urlParams.get('code') || fragmentParams.get('access_token');
-    const token = urlParams.get('token') || urlParams.get('token_hash');
+    const token = urlParams.get('token');
+    const token_hash = urlParams.get('token_hash');
     const type = urlParams.get('type') || 'email';
     
     const tokenInfo = {
       code,
       token,
+      token_hash,
       type,
       fullURL: window.location.href,
       search: window.location.search,
@@ -409,7 +418,7 @@ const EmailConfirm = () => {
       // Extract token information
       const tokenInfo = extractTokenFromURL();
       
-      if (!tokenInfo.code && !tokenInfo.token) {
+      if (!tokenInfo.code && !tokenInfo.token && !tokenInfo.token_hash) {
         throw new Error('No confirmation code or token found in URL');
       }
 
@@ -418,7 +427,13 @@ const EmailConfirm = () => {
       let result;
       
       // Try different confirmation methods
-      if (tokenInfo.code) {
+      if (tokenInfo.token_hash) {
+        logInfo('Using token_hash-based confirmation');
+        result = await supabase.auth.verifyOtp({
+          token_hash: tokenInfo.token_hash,
+          type: tokenInfo.type
+        });
+      } else if (tokenInfo.code) {
         logInfo('Using code-based confirmation');
         result = await supabase.auth.verifyOtp({
           token_hash: tokenInfo.code,
