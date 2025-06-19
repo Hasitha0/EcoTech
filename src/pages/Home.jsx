@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import Hero from '../components/Hero';
 import RequestPickupForm from '../components/RequestPickupForm';
 import { useAuth } from '../context/AuthContext';
@@ -167,8 +167,16 @@ const testimonials = [
 const Home = () => {
   const { isAuthenticated, user, loading } = useAuth();
   
-  // Debug logging
-  React.useEffect(() => {
+  // Memoize auth validation to prevent infinite loops
+  const validateAuth = useCallback(() => {
+    // In development or localhost, display auth configuration
+    if (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development') {
+      validateAuthConfig();
+    }
+  }, []);
+
+  // Debug logging with stable dependencies
+  useEffect(() => {
     console.log('Home page - Auth state:', {
       loading,
       isAuthenticated,
@@ -179,7 +187,12 @@ const Home = () => {
         status: user.status
       } : null
     });
-  }, [loading, isAuthenticated, user]);
+  }, [loading, isAuthenticated, user?.id, user?.email, user?.role, user?.status]);
+  
+  // Single useEffect for auth validation
+  useEffect(() => {
+    validateAuth();
+  }, [validateAuth]);
   
   // Show pickup form only for authenticated public users
   const showPickupForm = isAuthenticated && user?.role === 'PUBLIC';
@@ -217,13 +230,6 @@ const Home = () => {
       </div>
     );
   };
-
-  useEffect(() => {
-    // In development or localhost, display auth configuration
-    if (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development') {
-      validateAuthConfig();
-    }
-  }, []);
 
   return (
     <div className="min-h-screen bg-black">
