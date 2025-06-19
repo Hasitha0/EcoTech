@@ -15,6 +15,9 @@ const EmailConfirm = () => {
   // Create supabase client once and memoize it
   const supabase = createSupabaseClient();
 
+  // Add immediate console log to verify component is rendering
+  console.log('🎯 EmailConfirm component is rendering!', { pathname: location.pathname, search: location.search });
+
   // Memoize navigation functions to prevent re-renders
   const handleGoToLogin = useCallback(() => {
     console.log('🔄 Navigating to login...');
@@ -205,94 +208,90 @@ const EmailConfirm = () => {
     confirmEmail();
   }, [confirmEmail]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full mx-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              Confirming Your Email
-            </h2>
-            <p className="text-gray-600">
-              Please wait while we verify your email address...
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              {message}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full mx-4">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950">
+      {/* Visible indicator that EmailConfirm component is loaded */}
+      <div className="fixed top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50">
+        EmailConfirm Component Loaded ✅
+      </div>
+      
+      <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          {error ? (
-            <>
-              <div className="text-red-500 mb-4">
-                <svg className="h-12 w-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                Email Confirmation Failed
-              </h2>
-              <p className="text-red-600 mb-4">{error}</p>
-              <div className="space-y-2">
+          <h2 className="text-4xl font-bold text-emerald-500 mb-4">
+            Email Confirmation
+          </h2>
+          
+          {loading && (
+            <div className="space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
+              <p className="text-gray-300">Processing your email confirmation...</p>
+            </div>
+          )}
+          
+          {message && !error && (
+            <div className="bg-emerald-900 border border-emerald-700 text-emerald-100 px-4 py-3 rounded mb-4">
+              <p>{message}</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded mb-4">
+              <p>{error}</p>
+              <div className="mt-4 space-x-4">
                 <button
                   onClick={handleResendConfirmation}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded transition-colors"
                 >
-                  Resend Confirmation Email
+                  Resend Confirmation
                 </button>
                 <button
                   onClick={handleGoToLogin}
-                  className="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
                 >
                   Go to Login
                 </button>
                 <button
                   onClick={handleGoToRegister}
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors"
                 >
                   Register Again
                 </button>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="text-green-500 mb-4">
-                <svg className="h-12 w-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                Email Confirmed!
-              </h2>
-              <p className="text-green-600 mb-4">{message}</p>
-              <p className="text-gray-500 text-sm">
-                Redirecting to your dashboard...
-              </p>
-              <button
-                onClick={handleGoToDashboard}
-                className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                Continue to Dashboard
-              </button>
-            </>
+            </div>
           )}
           
-          {/* Debug information in development or when there are issues */}
-          {(debugInfo.authConfig?.domain?.includes('localhost') || process.env.NODE_ENV === 'development' || error) && (
-            <div className="mt-6 p-4 bg-gray-100 rounded-lg text-left">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Debug Information:</h3>
-              <pre className="text-xs text-gray-600 overflow-auto max-h-40">
-                {JSON.stringify(debugInfo, null, 2)}
-              </pre>
+          {!loading && !error && !message && (
+            <div className="space-y-4">
+              <p className="text-gray-300">Ready to confirm your email.</p>
+              <div className="space-x-4">
+                <button
+                  onClick={handleGoToLogin}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
+                >
+                  Go to Login
+                </button>
+                <button
+                  onClick={handleGoToDashboard}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
             </div>
+          )}
+
+          {/* Debug information */}
+          {Object.keys(debugInfo).length > 0 && (
+            <details className="mt-8 text-left">
+              <summary className="cursor-pointer text-emerald-400 hover:text-emerald-300">
+                Debug Information (Click to expand)
+              </summary>
+              <div className="mt-4 p-4 bg-gray-800 rounded-lg">
+                <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-auto">
+                  {JSON.stringify(debugInfo, null, 2)}
+                </pre>
+              </div>
+            </details>
           )}
         </div>
       </div>

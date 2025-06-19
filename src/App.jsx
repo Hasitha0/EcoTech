@@ -485,10 +485,18 @@ function AppContent() {
   const { isDarkMode } = useTheme();
   const location = useLocation();
   
+  // Debug logging for routing issues
+  useEffect(() => {
+    console.log('🔍 AppContent - Current location:', location.pathname);
+    console.log('🔍 AppContent - Full location:', location);
+  }, [location]);
+  
   // Hide navbar for all authenticated users on dashboard routes and registration-pending page
   const shouldHideNavbar = (user && location.pathname.startsWith('/dashboard')) || 
                           location.pathname === '/registration-pending' ||
-                          location.pathname === '/email-confirmed';
+                          location.pathname === '/email-confirmed' ||
+                          location.pathname === '/confirm' ||
+                          location.pathname === '/auth/confirm';
   
   // Hide footer for all authenticated users on dashboard routes, registration-pending page, register page, and login page
   const shouldHideFooter = (user && location.pathname.startsWith('/dashboard')) || 
@@ -496,7 +504,9 @@ function AppContent() {
                           location.pathname === '/register' ||
                           location.pathname.startsWith('/register/') ||
                           location.pathname === '/login' ||
-                          location.pathname === '/email-confirmed';
+                          location.pathname === '/email-confirmed' ||
+                          location.pathname === '/confirm' ||
+                          location.pathname === '/auth/confirm';
 
   return (
       <div className="min-h-screen flex flex-col transition-all duration-500 bg-slate-950">
@@ -518,6 +528,8 @@ function AppContent() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/confirm" element={<EmailConfirm />} />
             <Route path="/confirm" element={<EmailConfirm />} />
+            {/* Debug route to test routing */}
+            <Route path="/test-route" element={<div className="min-h-screen flex items-center justify-center bg-slate-950 text-white"><h1>Test Route Works!</h1></div>} />
             <Route path="/registration-pending" element={
               <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 transition-all duration-500 bg-slate-950">
                 <div className="max-w-md w-full text-center">
